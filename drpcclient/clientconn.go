@@ -2,11 +2,9 @@ package drpcclient
 
 import (
 	"context"
+
 	"storj.io/drpc"
 )
-
-// DialerFunc is a function that returns a drpc.Conn or an error.
-type DialerFunc func(ctx context.Context) (drpc.Conn, error)
 
 // ClientConn represents a DRPC client connection, with support for configuring the
 // connection with dial options such as interceptors.
@@ -15,15 +13,9 @@ type ClientConn struct {
 	dopts dialOptions
 }
 
-// NewClientConnWithOptions creates a new ClientConn with the specified dial options
-// and dialer function. The dialer function is used to obtain the underlying drpc.Conn,
-// either from a pool or a concrete connection.
-func NewClientConnWithOptions(ctx context.Context, dialer DialerFunc, opts ...DialOption) (*ClientConn, error) {
-	conn, err := dialer(ctx)
-	if err != nil {
-		return nil, err
-	}
-
+// NewClientConnWithOptions creates a new ClientConn with the specified dial options and drpc connection.
+// The passed in drpc connection can be either a concrete connection or a pooled connection.
+func NewClientConnWithOptions(ctx context.Context, conn drpc.Conn, opts ...DialOption) (*ClientConn, error) {
 	clientConn := &ClientConn{
 		Conn:  conn,
 		dopts: defaultDialOptions(),
