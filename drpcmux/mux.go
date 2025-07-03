@@ -7,7 +7,6 @@ import (
 	"reflect"
 
 	"github.com/zeebo/errs"
-
 	"storj.io/drpc"
 )
 
@@ -15,6 +14,20 @@ import (
 // appropriate Receivers registered by Descriptions.
 type Mux struct {
 	rpcs map[string]rpcData
+
+	unaryInterceptor  UnaryServerInterceptor
+	streamInterceptor StreamServerInterceptor
+}
+
+// NewWithInterceptors constructs a new Mux with the provided unary and stream server interceptors.
+func NewWithInterceptors(
+	unaryInterceptors []UnaryServerInterceptor, streamInterceptors []StreamServerInterceptor,
+) *Mux {
+	return &Mux{
+		rpcs:              make(map[string]rpcData),
+		unaryInterceptor:  chainUnaryInterceptors(unaryInterceptors),
+		streamInterceptor: chainStreamInterceptors(streamInterceptors),
+	}
 }
 
 // New constructs a new Mux.
@@ -55,7 +68,9 @@ func (m *Mux) Register(srv interface{}, desc drpc.Description) error {
 }
 
 // registerOne does the work to register a single rpc.
-func (m *Mux) registerOne(srv interface{}, rpc string, enc drpc.Encoding, receiver drpc.Receiver, method interface{}) error {
+func (m *Mux) registerOne(
+	srv interface{}, rpc string, enc drpc.Encoding, receiver drpc.Receiver, method interface{},
+) error {
 	data := rpcData{srv: srv, enc: enc, receiver: receiver}
 
 	switch mt := reflect.TypeOf(method); {
