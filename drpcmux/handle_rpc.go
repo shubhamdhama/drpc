@@ -4,10 +4,10 @@
 package drpcmux
 
 import (
+	"context"
 	"reflect"
 
 	"github.com/zeebo/errs"
-
 	"storj.io/drpc"
 )
 
@@ -30,7 +30,21 @@ func (m *Mux) HandleRPC(stream drpc.Stream, rpc string) (err error) {
 		in = msg
 	}
 
-	out, err := data.receiver(data.srv, stream.Context(), in, stream)
+	var out drpc.Message
+	if data.unitary && m.unaryInterceptor != nil {
+		out, err = m.unaryInterceptor(stream.Context(), in, rpc,
+			func(ctx context.Context, req interface{}) (interface{}, error) {
+				return data.receiver(data.srv, ctx, req, stream)
+			})
+	} else if !data.unitary && m.streamInterceptor != nil {
+		out, err = m.streamInterceptor(stream.Context(), stream, rpc,
+			func(ctx context.Context, st drpc.Stream) (interface{}, error) {
+				return data.receiver(data.srv, ctx, st, stream)
+			})
+	} else {
+		out, err = data.receiver(data.srv, stream.Context(), in, stream)
+	}
+
 	switch {
 	case err != nil:
 		return errs.Wrap(err)
