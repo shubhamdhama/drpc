@@ -50,6 +50,28 @@ func Decode(buf []byte) (map[string]string, error) {
 
 type metadataKey struct{}
 
+// ClearContext removes all metadata from the context and returns a new context
+// with no metadata attached.
+func ClearContext(ctx context.Context) context.Context {
+	return context.WithValue(ctx, metadataKey{}, nil)
+}
+
+// ClearContextExcept removes all metadata from the context except for the
+// specified key. If the specified key doesn't exist in the metadata, it clears
+// all metadata. Returns a new context with only the specified key-value pair
+// preserved.
+func ClearContextExcept(ctx context.Context, key string) context.Context {
+	md, ok := Get(ctx)
+	if !ok {
+		return ClearContext(ctx)
+	}
+	value, ok := md[key]
+	if !ok {
+		return ClearContext(ctx)
+	}
+	return context.WithValue(ctx, metadataKey{}, map[string]string{key: value})
+}
+
 // Add associates a key/value pair on the context.
 func Add(ctx context.Context, key, value string) context.Context {
 	metadata, ok := Get(ctx)
@@ -65,4 +87,14 @@ func Add(ctx context.Context, key, value string) context.Context {
 func Get(ctx context.Context) (map[string]string, bool) {
 	metadata, ok := ctx.Value(metadataKey{}).(map[string]string)
 	return metadata, ok
+}
+
+// GetValue retrieves a specific value by key from the context's metadata.
+func GetValue(ctx context.Context, key string) (string, bool) {
+	metadata, ok := Get(ctx)
+	if !ok {
+		return "", false
+	}
+	val, ok := metadata[key]
+	return val, ok
 }
