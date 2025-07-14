@@ -5,6 +5,7 @@ package drpcserver
 
 import (
 	"context"
+	"crypto/tls"
 	"net"
 	"sync"
 	"time"
@@ -92,6 +93,18 @@ func (s *Server) getStats(rpc string) *drpcstats.Stats {
 
 // ServeOne serves a single set of rpcs on the provided transport.
 func (s *Server) ServeOne(ctx context.Context, tr drpc.Transport) (err error) {
+	// Check if the transport is a TLS connection
+	if tlsConn, ok := tr.(*tls.Conn); ok {
+		err := tlsConn.Handshake()
+		if err != nil {
+			return err
+		}
+		state := tlsConn.ConnectionState()
+		if len(state.PeerCertificates) > 0 {
+			ctx = drpcctx.WithPeerCertificate(ctx, state.PeerCertificates[0])
+		}
+	}
+
 	man := drpcmanager.NewWithOptions(tr, s.opts.Manager)
 	defer func() { err = errs.Combine(err, man.Close()) }()
 

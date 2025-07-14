@@ -50,6 +50,22 @@ func Decode(buf []byte) (map[string]string, error) {
 
 type metadataKey struct{}
 
+func ClearContext(ctx context.Context, md map[string]string) context.Context {
+	return context.WithValue(ctx, metadataKey{}, md)
+}
+
+func ClearContextExcept(ctx context.Context, key string) context.Context {
+	md, ok := Get(ctx)
+	if !ok {
+		return ClearContext(ctx, nil)
+	}
+	value, ok := md[key]
+	if !ok {
+		return ClearContext(ctx, nil)
+	}
+	return ClearContext(ctx, map[string]string{key: value})
+}
+
 // Add associates a key/value pair on the context.
 func Add(ctx context.Context, key, value string) context.Context {
 	metadata, ok := Get(ctx)
@@ -65,4 +81,13 @@ func Add(ctx context.Context, key, value string) context.Context {
 func Get(ctx context.Context) (map[string]string, bool) {
 	metadata, ok := ctx.Value(metadataKey{}).(map[string]string)
 	return metadata, ok
+}
+
+func GetValue(ctx context.Context, key string) (string, bool) {
+	metadata, ok := Get(ctx)
+	if !ok {
+		return "", false
+	}
+	val, ok := metadata[key]
+	return val, ok
 }
