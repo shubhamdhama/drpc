@@ -31,12 +31,12 @@ func (m *Mux) HandleRPC(stream drpc.Stream, rpc string) (err error) {
 	}
 
 	var out drpc.Message
-	if data.unitary && m.unaryInterceptor != nil {
+	if data.in1 != streamType && m.unaryInterceptor != nil {
 		out, err = m.unaryInterceptor(stream.Context(), in, rpc,
 			func(ctx context.Context, req interface{}) (interface{}, error) {
 				return data.receiver(data.srv, ctx, req, stream)
 			})
-	} else if !data.unitary && m.streamInterceptor != nil {
+	} else if data.in1 == streamType && m.streamInterceptor != nil {
 		out, err = m.streamInterceptor(stream, rpc,
 			func(st drpc.Stream) (interface{}, error) {
 				return data.receiver(data.srv, st.Context(), st, stream)
