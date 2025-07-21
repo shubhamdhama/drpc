@@ -1,4 +1,5 @@
 .DEFAULT_GOAL = all
+GO := go
 
 .PHONY: all
 all: tidy docs generate lint vet test
@@ -45,3 +46,17 @@ test:
 	./scripts/run.sh '*'           go test ./...              -race -count=1 -bench=. -benchtime=1x
 	./scripts/run.sh 'integration' go test ./... -tags=gogo   -race -count=1 -bench=. -benchtime=1x
 	./scripts/run.sh 'integration' go test ./... -tags=custom -race -count=1 -bench=. -benchtime=1x
+
+.PHONY: gen-bazel
+gen-bazel:
+	@echo "Generating WORKSPACE"
+	@echo 'workspace(name = "io_storj_drpc")' > WORKSPACE
+	@echo 'Running gazelle...'
+	${GO} run github.com/bazelbuild/bazel-gazelle/cmd/gazelle@v0.40.0 \
+		update --go_prefix=storj.io/drpc --exclude=examples --exclude=scripts --repo_root=.
+	@echo 'You should now be able to build Cockroach using:'
+	@echo '  ./dev build short -- --override_repository=io_storj_drpc=${CURDIR}'
+
+.PHONY: clean-bazel
+clean-bazel:
+	git clean -dxf WORKSPACE BUILD.bazel '**/BUILD.bazel'
