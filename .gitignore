@@ -1,5 +1,9 @@
 *.test
 .vscode
+.idea/*
 vendor
 result
-.idea/*
+
+# Bazel files, generated with 'make gen-bazel'.
+/WORKSPACE
+BUILD.bazel
