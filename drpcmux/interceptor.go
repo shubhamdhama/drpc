@@ -7,7 +7,7 @@ import (
 )
 
 // UnaryHandler defines the handler for the unary RPC.
-type UnaryHandler func(ctx context.Context, in interface{}) (out interface{}, err error)
+type UnaryHandler func(ctx context.Context, req interface{}) (out interface{}, err error)
 
 // UnaryServerInterceptor defines the server side interceptor for unary RPC.
 type UnaryServerInterceptor func(
@@ -36,19 +36,19 @@ func getChainedUnaryHandler(
 	if currIdx == len(interceptors) {
 		return handler
 	}
-	return func(ctx context.Context, in interface{}) (out interface{}, err error) {
+	return func(ctx context.Context, req interface{}) (out interface{}, err error) {
 		return interceptors[currIdx](
-			ctx, in, rpc, getChainedUnaryHandler(interceptors, currIdx+1, rpc, handler),
+			ctx, req, rpc, getChainedUnaryHandler(interceptors, currIdx+1, rpc, handler),
 		)
 	}
 }
 
 // StreamHandler defines the handler for the stream RPC.
-type StreamHandler func(ctx context.Context, in drpc.Stream) (out interface{}, err error)
+type StreamHandler func(stream drpc.Stream) (out interface{}, err error)
 
 // StreamServerInterceptor defines a server side interceptor for unary RPC.
 type StreamServerInterceptor func(
-	ctx context.Context, stream drpc.Stream, rpc string, handler StreamHandler) (out interface{}, err error)
+	stream drpc.Stream, rpc string, handler StreamHandler) (out interface{}, err error)
 
 func chainStreamInterceptors(interceptors []StreamServerInterceptor) StreamServerInterceptor {
 	switch n := len(interceptors); n {
@@ -57,11 +57,11 @@ func chainStreamInterceptors(interceptors []StreamServerInterceptor) StreamServe
 	case 1:
 		return interceptors[0]
 	default:
-		return func(ctx context.Context, stream drpc.Stream, rpc string, handler StreamHandler) (
+		return func(stream drpc.Stream, rpc string, handler StreamHandler) (
 			out interface{}, err error,
 		) {
 			return interceptors[0](
-				ctx, stream, rpc, getChainedStreamHandler(interceptors, 1, rpc, handler),
+				stream, rpc, getChainedStreamHandler(interceptors, 1, rpc, handler),
 			)
 		}
 	}
@@ -73,9 +73,9 @@ func getChainedStreamHandler(
 	if currIdx == len(interceptors) {
 		return handler
 	}
-	return func(ctx context.Context, in drpc.Stream) (out interface{}, err error) {
+	return func(stream drpc.Stream) (out interface{}, err error) {
 		return interceptors[currIdx](
-			ctx, in, rpc, getChainedStreamHandler(interceptors, currIdx+1, rpc, handler),
+			stream, rpc, getChainedStreamHandler(interceptors, currIdx+1, rpc, handler),
 		)
 	}
 }

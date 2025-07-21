@@ -37,9 +37,9 @@ func (m *Mux) HandleRPC(stream drpc.Stream, rpc string) (err error) {
 				return data.receiver(data.srv, ctx, req, stream)
 			})
 	} else if !data.unitary && m.streamInterceptor != nil {
-		out, err = m.streamInterceptor(stream.Context(), stream, rpc,
-			func(ctx context.Context, st drpc.Stream) (interface{}, error) {
-				return data.receiver(data.srv, ctx, st, stream)
+		out, err = m.streamInterceptor(stream, rpc,
+			func(st drpc.Stream) (interface{}, error) {
+				return data.receiver(data.srv, st.Context(), st, stream)
 			})
 	} else {
 		out, err = data.receiver(data.srv, stream.Context(), in, stream)
