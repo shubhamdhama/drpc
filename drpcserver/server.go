@@ -5,12 +5,12 @@ package drpcserver
 
 import (
 	"context"
+	"crypto/tls"
 	"net"
 	"sync"
 	"time"
 
 	"github.com/zeebo/errs"
-
 	"storj.io/drpc"
 	"storj.io/drpc/drpccache"
 	"storj.io/drpc/drpcctx"
@@ -92,6 +92,32 @@ func (s *Server) getStats(rpc string) *drpcstats.Stats {
 
 // ServeOne serves a single set of rpcs on the provided transport.
 func (s *Server) ServeOne(ctx context.Context, tr drpc.Transport) (err error) {
+	// Check if the transport is a TLS connection
+	if tlsConn, ok := tr.(*tls.Conn); ok {
+		// Manually perform the TLS handshake to access peer certificate
+		// information. In Go's TLS implementation, the handshake is normally
+		// performed lazily on the first read/write operation. However, the
+		// transport received by ServeOne hasn't performed any I/O yet, so
+		// ConnectionState() would be empty. Only after the handshake completes
+		// is ConnectionState populated with peer certificates and other
+		// connection details that we need for authentication context.
+		//
+		// This explicit Handshake() call is safe and appropriate here. The
+		// connection hasn't started processing requests yet, so we're not
+		// interrupting any ongoing communication. Even if we didn't call it
+		// explicitly, the first read/write operation would call it internally
+		// anyway.
+		err := tlsConn.Handshake()
+		if err != nil {
+			return err
+		}
+		state := tlsConn.ConnectionState()
+		if len(state.PeerCertificates) > 0 {
+			ctx = drpcctx.WithPeerConnectionInfo(
+				ctx, drpcctx.PeerConnectionInfo{Certificates: state.PeerCertificates})
+		}
+	}
+
 	man := drpcmanager.NewWithOptions(tr, s.opts.Manager)
 	defer func() { err = errs.Combine(err, man.Close()) }()
 

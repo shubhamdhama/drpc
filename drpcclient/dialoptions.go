@@ -8,6 +8,8 @@ type dialOptions struct {
 
 	unaryInts  []UnaryClientInterceptor
 	streamInts []StreamClientInterceptor
+
+	perRPCMetadata map[string]string
 }
 
 // DialOption configures how we set up the client connection.
@@ -30,5 +32,11 @@ func WithChainUnaryInterceptor(ints ...UnaryClientInterceptor) DialOption {
 func WithChainStreamInterceptor(ints ...StreamClientInterceptor) DialOption {
 	return func(opt *dialOptions) {
 		opt.streamInts = append(opt.streamInts, ints...)
+	}
+}
+
+func WithPerRPCMetadata(metadata map[string]string) DialOption {
+	return func(opt *dialOptions) {
+		opt.perRPCMetadata = metadata
 	}
 }
